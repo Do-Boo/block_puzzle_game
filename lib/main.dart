@@ -1,100 +1,148 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'dart:math';
 
-void main() => runApp(const BlockPuzzleApp());
+void main() => runApp(const PuzzleBlockGame());
 
-class BlockPuzzleApp extends StatelessWidget {
-  const BlockPuzzleApp({super.key});
+class PuzzleBlockGame extends StatelessWidget {
+  const PuzzleBlockGame({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Block Puzzle',
+    return GetMaterialApp(
+      title: 'Puzzle Block Game',
       theme: ThemeData(primarySwatch: Colors.blue),
       home: const GameScreen(),
     );
   }
 }
 
-class GameScreen extends StatefulWidget {
+class GameScreen extends StatelessWidget {
   const GameScreen({super.key});
 
   @override
-  _GameScreenState createState() => _GameScreenState();
+  Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final boardSize = Size(screenSize.width, screenSize.width * GameController.ROWS / GameController.COLS);
+    final cellSize = boardSize.width / GameController.COLS;
+
+    final controller = Get.put(GameController(boardSize));
+
+    return Scaffold(
+      appBar: AppBar(title: Obx(() => Text('Score: ${controller.score}'))),
+      body: Column(
+        children: [
+          SizedBox(
+            width: boardSize.width,
+            height: boardSize.height,
+            child: GestureDetector(
+              onPanUpdate: (details) {
+                final RenderBox renderBox = context.findRenderObject() as RenderBox;
+                final localPosition = renderBox.globalToLocal(details.globalPosition);
+                controller.updateDragPosition(localPosition);
+              },
+              child: DragTarget<PuzzlePiece>(
+                builder: (context, candidateData, rejectedData) {
+                  return GetBuilder<GameController>(
+                    builder: (controller) => CustomPaint(
+                      painter: BoardPainter(
+                        controller.board,
+                        controller.draggedPiece.value,
+                        controller.dragPosition.value,
+                        controller.boardDragPosition.value,
+                        boardSize,
+                        GameController.ROWS,
+                        GameController.COLS,
+                        controller.animationValue,
+                      ),
+                      size: boardSize,
+                    ),
+                  );
+                },
+                onAcceptWithDetails: (details) {
+                  if (controller.boardDragPosition.value != null) {
+                    controller.placePiece(controller.boardDragPosition.value!, details.data);
+                  }
+                },
+                onLeave: (piece) {
+                  controller.clearDraggedPiece();
+                },
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 100,
+            child: Obx(() => Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: controller.availablePieces
+                      .map((piece) => DraggablePuzzlePiece(
+                            piece: piece,
+                            onDragStarted: () => controller.setDraggedPiece(piece),
+                            cellSize: cellSize,
+                          ))
+                      .toList(),
+                )),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _GameScreenState extends State<GameScreen> {
+class GameController extends GetxController with GetSingleTickerProviderStateMixin {
   static const int ROWS = 8;
   static const int COLS = 8;
-  List<List<int>> grid = List.generate(ROWS, (_) => List.filled(COLS, 0));
-  List<List<List<int>>> puzzlePieces = [];
-  int score = 0;
+  static const double VERTICAL_OFFSET = 100.0; // 수정: 수직 오프셋 값 증가
+  static const int ROW_OFFSET = 2;
 
-  // 드래그 중인 조각 정보를 저장하는 변수 추가
-  List<List<int>>? draggedPiece;
-  int? draggedRow;
-  int? draggedCol;
+  late Size boardSize; // 추가: boardSize 변수
 
-  // 미리보기 조각 정보를 저장하는 변수 추가
-  List<List<int>>? previewPiece;
-  int? previewRow;
-  int? previewCol;
+  final RxList<List<int>> board = List.generate(ROWS, (_) => List.filled(COLS, 0)).obs;
+  final RxList<PuzzlePiece> availablePieces = <PuzzlePiece>[].obs;
+  final RxInt score = 0.obs;
+  final Rx<PuzzlePiece?> draggedPiece = Rx<PuzzlePiece?>(null);
+  final Rx<Offset?> boardDragPosition = Rx<Offset?>(null); // 추가: 보드 상의 드래그 위치
+  final Rx<Offset?> dragPosition = Rx<Offset?>(null);
 
-  // 테트리스 조각 모양 정의
-  static const List<List<List<int>>> TETROMINOS = [
-    [
-      [1, 1],
-      [1, 1]
-    ], // O
-    [
-      [1, 1, 1, 1]
-    ], // I
-    [
-      [1, 1, 1],
-      [0, 1, 0]
-    ], // T
-    [
-      [1, 1, 1],
-      [1, 0, 0]
-    ], // L
-    [
-      [1, 1, 1],
-      [0, 0, 1]
-    ], // J
-    [
-      [1, 1, 0],
-      [0, 1, 1]
-    ], // S
-    [
-      [0, 1, 1],
-      [1, 1, 0]
-    ], // Z
-  ];
+  late AnimationController _animationController;
+  late Animation<double> _animation;
+
+  double get animationValue => _animation.value;
+
+  GameController(this.boardSize);
 
   @override
-  void initState() {
-    super.initState();
-    generateNewPuzzlePieces();
-    print('Game initialized');
+  void onInit() {
+    super.onInit();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _animation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    );
+    _animation.addListener(() => update());
+    generateNewPieces();
   }
 
-  void generateNewPuzzlePieces() {
-    final random = Random();
-    puzzlePieces = List.generate(3, (_) {
-      final tetromino = TETROMINOS[random.nextInt(TETROMINOS.length)];
-      final color = random.nextInt(5) + 1;
-      return tetromino.map((row) => row.map((cell) => cell * color).toList()).toList();
-    });
-    print('새로운 퍼즐 조각 생성: $puzzlePieces');
+  // 수정: 오프셋을 계산하는 메서드
+  Offset calculateOffset(Offset position) {
+    return Offset(position.dx, position.dy - VERTICAL_OFFSET);
   }
 
-  bool canPlacePiece(int row, int col, List<List<int>> piece) {
-    for (int i = 0; i < piece.length; i++) {
-      for (int j = 0; j < piece[i].length; j++) {
-        if (piece[i][j] != 0) {
+  void generateNewPieces() {
+    availablePieces.value = List.generate(3, (_) => PuzzlePiece.random());
+  }
+
+  bool canPlacePiece(int row, int col, PuzzlePiece piece) {
+    for (int i = 0; i < piece.shape.length; i++) {
+      for (int j = 0; j < piece.shape[i].length; j++) {
+        if (piece.shape[i][j] != 0) {
           int newRow = row + i;
           int newCol = col + j;
-          if (newRow < 0 || newRow >= ROWS || newCol < 0 || newCol >= COLS || grid[newRow][newCol] != 0) {
+          if (newRow < 0 || newRow >= ROWS || newCol < 0 || newCol >= COLS || board[newRow][newCol] != 0) {
             return false;
           }
         }
@@ -103,27 +151,44 @@ class _GameScreenState extends State<GameScreen> {
     return true;
   }
 
-  void placePiece(int row, int col, List<List<int>> piece) {
-    if (!canPlacePiece(row, col, piece)) {
-      print('$row 행, $col 열에 조각을 놓을 수 없습니다');
+  // 수정: placePiece 메서드
+  void placePiece(Offset position, PuzzlePiece piece) {
+    double cellWidth = boardSize.width / COLS;
+    double cellHeight = boardSize.height / ROWS;
+
+    int col = (position.dx / cellWidth).floor();
+    int row = (position.dy / cellHeight).floor() - ROW_OFFSET;
+
+    // 보드 경계 체크
+    if (row < 0 || row + piece.shape.length > ROWS || col < 0 || col + piece.shape[0].length > COLS) {
+      Get.snackbar('실패', '보드 경계를 벗어났습니다.', duration: const Duration(seconds: 1));
       return;
     }
 
-    setState(() {
-      for (int i = 0; i < piece.length; i++) {
-        for (int j = 0; j < piece[i].length; j++) {
-          if (piece[i][j] != 0) {
-            grid[row + i][col + j] = piece[i][j];
-          }
+    if (!canPlacePiece(row, col, piece)) {
+      Get.snackbar('실패', '이 위치에 조각을 놓을 수 없습니다.', duration: const Duration(seconds: 1));
+      return;
+    }
+
+    for (int i = 0; i < piece.shape.length; i++) {
+      for (int j = 0; j < piece.shape[i].length; j++) {
+        if (piece.shape[i][j] != 0) {
+          board[row + i][col + j] = piece.color;
         }
       }
-      print('$row 행, $col 열에 조각을 놓았습니다');
-      puzzlePieces.remove(piece);
-      if (puzzlePieces.isEmpty) {
-        generateNewPuzzlePieces();
-      }
-      checkLines();
+    }
+    availablePieces.remove(piece);
+    if (availablePieces.isEmpty) {
+      generateNewPieces();
+    }
+    checkLines();
+    checkGameOver();
+
+    _animationController.forward(from: 0.0).then((_) {
+      Get.snackbar('성공', '조각이 성공적으로 배치되었습니다!', duration: const Duration(seconds: 1));
     });
+
+    update();
   }
 
   void checkLines() {
@@ -131,129 +196,282 @@ class _GameScreenState extends State<GameScreen> {
 
     // Check rows
     for (int row = 0; row < ROWS; row++) {
-      if (grid[row].every((cell) => cell != 0)) {
+      if (board[row].every((cell) => cell != 0)) {
         linesCleared++;
-        grid[row] = List.filled(COLS, 0);
+        board[row] = List.filled(COLS, 0);
       }
     }
 
     // Check columns
     for (int col = 0; col < COLS; col++) {
-      if (grid.every((row) => row[col] != 0)) {
+      if (board.every((row) => row[col] != 0)) {
         linesCleared++;
         for (int row = 0; row < ROWS; row++) {
-          grid[row][col] = 0;
+          board[row][col] = 0;
         }
       }
     }
 
     if (linesCleared > 0) {
-      score += linesCleared * 100;
-      print('$linesCleared lines cleared. New score: $score');
+      score.value += linesCleared * 100;
+    }
+  }
+
+  bool isGameOver() {
+    for (var piece in availablePieces) {
+      for (int row = 0; row < ROWS; row++) {
+        for (int col = 0; col < COLS; col++) {
+          if (canPlacePiece(row, col, piece)) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  }
+
+  void checkGameOver() {
+    if (isGameOver()) {
+      Get.dialog(
+        AlertDialog(
+          title: const Text('게임 오버'),
+          content: Text('최종 점수: ${score.value}'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('다시 시작'),
+              onPressed: () {
+                Get.back();
+                resetGame();
+              },
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  void resetGame() {
+    board.value = List.generate(ROWS, (_) => List.filled(COLS, 0));
+    score.value = 0;
+    generateNewPieces();
+    update();
+  }
+
+  void setDraggedPiece(PuzzlePiece piece) {
+    draggedPiece.value = piece;
+  }
+
+  // 수정: updateDragPosition 메서드
+  void updateDragPosition(Offset position) {
+    dragPosition.value = position;
+
+    double cellWidth = boardSize.width / COLS;
+    double cellHeight = boardSize.height / ROWS;
+
+    Offset adjustedPosition = calculateOffset(position);
+    double col = (adjustedPosition.dx / cellWidth);
+    double row = (adjustedPosition.dy / cellHeight);
+
+    // 보드 경계를 벗어나도 boardDragPosition을 업데이트합니다.
+    boardDragPosition.value = Offset(col * cellWidth, row * cellHeight);
+
+    update();
+  }
+
+  void clearDraggedPiece() {
+    draggedPiece.value = null;
+    dragPosition.value = null;
+    update();
+  }
+
+  @override
+  void onClose() {
+    _animationController.dispose();
+    super.onClose();
+  }
+}
+
+class PuzzlePiece {
+  final List<List<int>> shape;
+  final int color;
+
+  PuzzlePiece(this.shape, this.color);
+
+  factory PuzzlePiece.random() {
+    final shapes = [
+      [
+        [1, 1],
+        [1, 1]
+      ],
+      // [
+      //   [1, 1, 1],
+      //   [0, 1, 0]
+      // ],
+      [
+        [1, 1, 1]
+      ],
+      // [
+      //   [1, 1],
+      //   [1, 0]
+      // ],
+      [
+        [1, 1, 1, 1]
+      ],
+      [
+        [1],
+        [1],
+        [1],
+        [1]
+      ],
+    ];
+    return PuzzlePiece(
+      shapes[Random().nextInt(shapes.length)],
+      Random().nextInt(shapes.length) + 1,
+    );
+  }
+}
+
+class DraggablePuzzlePiece extends StatelessWidget {
+  final PuzzlePiece piece;
+  final VoidCallback onDragStarted;
+  final double cellSize;
+
+  const DraggablePuzzlePiece({
+    super.key,
+    required this.piece,
+    required this.onDragStarted,
+    required this.cellSize,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Draggable<PuzzlePiece>(
+      data: piece,
+      feedback: Transform.translate(
+        offset: const Offset(0, -GameController.VERTICAL_OFFSET), // 수정: 선택된 조각 위치 조정
+        child: PuzzlePieceWidget(piece: piece, cellSize: cellSize),
+      ),
+      childWhenDragging: const SizedBox(),
+      onDragStarted: onDragStarted,
+      onDragUpdate: (details) {
+        Get.find<GameController>().updateDragPosition(details.globalPosition);
+      },
+      onDragEnd: (details) {
+        Get.find<GameController>().clearDraggedPiece();
+      },
+      child: PuzzlePieceWidget(piece: piece, cellSize: cellSize * 0.6),
+    );
+  }
+}
+
+class PuzzlePieceWidget extends StatelessWidget {
+  final PuzzlePiece piece;
+  final double cellSize;
+
+  const PuzzlePieceWidget({super.key, required this.piece, required this.cellSize});
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: PiecePainter(piece),
+      size: Size(cellSize * piece.shape[0].length, cellSize * piece.shape.length),
+    );
+  }
+}
+
+class BoardPainter extends CustomPainter {
+  final List<List<int>> board;
+  final PuzzlePiece? draggedPiece;
+  final Offset? dragPosition;
+  final Offset? boardDragPosition; // 추가: 보드 상의 드래그 위치
+  final Size boardSize;
+  final int ROWS;
+  final int COLS;
+  final double animationValue;
+
+  BoardPainter(this.board, this.draggedPiece, this.dragPosition, this.boardDragPosition, this.boardSize, this.ROWS, this.COLS, this.animationValue);
+
+  bool canPlacePiece(int row, int col, PuzzlePiece piece) {
+    for (int i = 0; i < piece.shape.length; i++) {
+      for (int j = 0; j < piece.shape[i].length; j++) {
+        if (piece.shape[i][j] != 0) {
+          int newRow = row + i;
+          int newCol = col + j;
+          if (newRow < 0 || newRow >= ROWS || newCol < 0 || newCol >= COLS || board[newRow][newCol] != 0) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cellWidth = boardSize.width / COLS;
+    final cellHeight = boardSize.height / ROWS;
+
+    // 보드 그리기
+    for (int i = 0; i < ROWS; i++) {
+      for (int j = 0; j < COLS; j++) {
+        final rect = Rect.fromLTWH(j * cellWidth, i * cellHeight, cellWidth, cellHeight);
+        final color = _getColor(board[i][j]);
+        final animatedColor = Color.lerp(Colors.white, color, animationValue)!;
+        canvas.drawRect(rect, Paint()..color = animatedColor);
+        canvas.drawRect(
+            rect,
+            Paint()
+              ..color = Colors.black
+              ..style = PaintingStyle.stroke);
+      }
+    }
+
+    // 드래그 중인 조각 미리보기 그리기
+    if (draggedPiece != null && boardDragPosition != null) {
+      final row = (boardDragPosition!.dy / cellHeight).floor() - GameController.ROW_OFFSET;
+      final col = (boardDragPosition!.dx / cellWidth).floor();
+
+      // 보드 내부에 있을 때만 미리보기를 그립니다.
+      if (row >= 0 && row < ROWS && col >= 0 && col < COLS) {
+        final canPlace = canPlacePiece(row, col, draggedPiece!);
+        final previewColor = canPlace ? Colors.green.withOpacity(0.2) : Colors.red.withOpacity(0.2);
+        final borderColor = canPlace ? Colors.green : Colors.red;
+
+        for (int i = 0; i < draggedPiece!.shape.length; i++) {
+          for (int j = 0; j < draggedPiece!.shape[i].length; j++) {
+            if (draggedPiece!.shape[i][j] != 0) {
+              final rect = Rect.fromLTWH(
+                (col + j) * cellWidth,
+                (row + i) * cellHeight,
+                cellWidth,
+                cellHeight,
+              );
+              canvas.drawRect(rect, Paint()..color = previewColor);
+              canvas.drawRect(
+                  rect,
+                  Paint()
+                    ..color = borderColor
+                    ..style = PaintingStyle.stroke
+                    ..strokeWidth = 2);
+            }
+          }
+        }
+      }
+    }
+
+    // 실제 드래그 위치 표시 (디버깅용, 필요 없으면 제거)
+    if (dragPosition != null) {
+      canvas.drawCircle(dragPosition!, 5, Paint()..color = Colors.red);
+    }
+
+    // 보드 상의 드래그 위치 표시 (디버깅용)
+    if (boardDragPosition != null) {
+      canvas.drawCircle(boardDragPosition!, 5, Paint()..color = Colors.blue);
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    double cellSize = MediaQuery.of(context).size.width / COLS;
-    double previewCellSize = cellSize * 0.6;
-    double dragOffsetY = 150; // 드래그된 조각의 상단 오프셋
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('Block Puzzle')),
-      body: Column(
-        children: [
-          Text('Score: $score', style: const TextStyle(fontSize: 24)),
-          Expanded(
-            child: DragTarget<List<List<int>>>(
-              onWillAcceptWithDetails: (data) => true,
-              onAcceptWithDetails: (data) {
-                if (previewRow != null && previewCol != null) {
-                  placePiece(previewRow!, previewCol!, data.data);
-                }
-              },
-              builder: (context, candidateData, rejectedData) {
-                return GridView.builder(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: COLS,
-                    childAspectRatio: 1.0,
-                  ),
-                  itemCount: ROWS * COLS,
-                  itemBuilder: (context, index) {
-                    int row = index ~/ COLS;
-                    int col = index % COLS;
-                    return Container(
-                      decoration: BoxDecoration(
-                        color: _getCellColor(row, col),
-                        border: Border.all(color: Colors.black),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-          SizedBox(
-            height: previewCellSize * 4,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: puzzlePieces
-                  .map((piece) => Draggable<List<List<int>>>(
-                        data: piece,
-                        feedback: Transform.translate(
-                          offset: Offset(-piece[0].length.toDouble() * cellSize / 2, -150),
-                          child: PieceWidget(piece: piece, cellSize: cellSize),
-                        ),
-                        childWhenDragging: Container(),
-                        onDragStarted: () {
-                          setState(() {
-                            draggedPiece = piece;
-                          });
-                        },
-                        onDragUpdate: (details) {
-                          final RenderBox renderBox = context.findRenderObject() as RenderBox;
-                          final localPosition = renderBox.globalToLocal(details.globalPosition);
-                          setState(() {
-                            // 그리드 상의 행과 열 계산
-                            int pieceRows = draggedPiece!.length;
-                            int pieceCols = draggedPiece![0].length;
-                            previewRow = ((localPosition.dy - 300) / cellSize).floor();
-                            previewCol = ((localPosition.dx - (pieceCols * cellSize) / 2) / cellSize).floor();
-                            previewPiece = draggedPiece;
-                          });
-                        },
-                        onDragEnd: (details) {
-                          setState(() {
-                            draggedPiece = null;
-                            previewPiece = null;
-                            previewRow = null;
-                            previewCol = null;
-                          });
-                        },
-                        child: PieceWidget(piece: piece, cellSize: previewCellSize),
-                      ))
-                  .toList(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Color _getCellColor(int row, int col) {
-    if (previewPiece != null &&
-        row >= previewRow! &&
-        row < previewRow! + previewPiece!.length &&
-        col >= previewCol! &&
-        col < previewCol! + previewPiece![0].length) {
-      int pieceRow = row - previewRow!;
-      int pieceCol = col - previewCol!;
-      if (pieceRow >= 0 && pieceRow < previewPiece!.length && pieceCol >= 0 && pieceCol < previewPiece![0].length && previewPiece![pieceRow][pieceCol] != 0) {
-        return _getColor(previewPiece![pieceRow][pieceCol]).withOpacity(0.5);
-      }
-    }
-    return _getColor(grid[row][col]);
-  }
+  bool shouldRepaint(CustomPainter oldDelegate) => true;
 
   Color _getColor(int value) {
     switch (value) {
@@ -273,41 +491,35 @@ class _GameScreenState extends State<GameScreen> {
   }
 }
 
-class PieceWidget extends StatelessWidget {
-  final List<List<int>> piece;
-  final double cellSize;
+class PiecePainter extends CustomPainter {
+  final PuzzlePiece piece;
 
-  const PieceWidget({super.key, required this.piece, required this.cellSize});
+  PiecePainter(this.piece);
 
   @override
-  Widget build(BuildContext context) {
-    int rows = piece.length;
-    int cols = piece[0].length;
-    return SizedBox(
-      width: cellSize * cols,
-      height: cellSize * rows,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: piece
-            .map((row) => Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: row
-                      .map((cell) => Container(
-                            width: cellSize,
-                            height: cellSize,
-                            decoration: BoxDecoration(
-                              color: cell != 0 ? _getColor(cell) : Colors.transparent,
-                              border: cell != 0 ? Border.all(color: Colors.black) : null,
-                            ),
-                          ))
-                      .toList(),
-                ))
-            .toList(),
-      ),
-    );
+  void paint(Canvas canvas, Size size) {
+    final cellWidth = size.width / piece.shape[0].length;
+    final cellHeight = size.height / piece.shape.length;
+
+    for (int i = 0; i < piece.shape.length; i++) {
+      for (int j = 0; j < piece.shape[i].length; j++) {
+        if (piece.shape[i][j] != 0) {
+          final rect = Rect.fromLTWH(j * cellWidth, i * cellHeight, cellWidth, cellHeight);
+          canvas.drawRect(rect, Paint()..color = getColor(piece.color));
+          canvas.drawRect(
+              rect,
+              Paint()
+                ..color = Colors.black
+                ..style = PaintingStyle.stroke);
+        }
+      }
+    }
   }
 
-  Color _getColor(int value) {
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
+
+  Color getColor(int value) {
     switch (value) {
       case 1:
         return Colors.red;
@@ -320,7 +532,7 @@ class PieceWidget extends StatelessWidget {
       case 5:
         return Colors.purple;
       default:
-        return Colors.white;
+        return Colors.grey;
     }
   }
 }
