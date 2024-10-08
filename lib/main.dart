@@ -129,7 +129,7 @@ class GameController extends GetxController with GetSingleTickerProviderStateMix
 
   // 수정: 오프셋을 계산하는 메서드
   Offset calculateOffset(Offset position) {
-    return Offset(position.dx, position.dy - VERTICAL_OFFSET);
+    return Offset(position.dx, position.dy);
   }
 
   void generateNewPieces() {
@@ -275,6 +275,9 @@ class GameController extends GetxController with GetSingleTickerProviderStateMix
     // 보드 경계를 벗어나도 boardDragPosition을 업데이트합니다.
     boardDragPosition.value = Offset(col * cellWidth, row * cellHeight);
 
+    debugPrint('boardDragPosition: ${boardDragPosition.value}');
+    debugPrint('dragPosition: ${dragPosition.value}');
+
     update();
   }
 
@@ -348,8 +351,9 @@ class DraggablePuzzlePiece extends StatelessWidget {
     return Draggable<PuzzlePiece>(
       data: piece,
       feedback: Transform.translate(
-        offset: const Offset(0, -GameController.VERTICAL_OFFSET), // 수정: 선택된 조각 위치 조정
-        child: PuzzlePieceWidget(piece: piece, cellSize: cellSize),
+        offset: Offset(-piece.shape[0].length * cellSize / 2, -GameController.VERTICAL_OFFSET), // 수정: 선택된 조각 위치 조정
+        // child: PuzzlePieceWidget(piece: piece, cellSize: cellSize),
+        child: const SizedBox(),
       ),
       childWhenDragging: const SizedBox(),
       onDragStarted: onDragStarted,
@@ -427,9 +431,9 @@ class BoardPainter extends CustomPainter {
     }
 
     // 드래그 중인 조각 미리보기 그리기
-    if (draggedPiece != null && boardDragPosition != null) {
-      final row = (boardDragPosition!.dy / cellHeight).floor() - GameController.ROW_OFFSET;
-      final col = (boardDragPosition!.dx / cellWidth).floor();
+    if (draggedPiece != null) {
+      final row = (dragPosition!.dy / cellHeight).floor() - GameController.ROW_OFFSET;
+      final col = (dragPosition!.dx / cellWidth).floor();
 
       // 보드 내부에 있을 때만 미리보기를 그립니다.
       if (row >= 0 && row < ROWS && col >= 0 && col < COLS) {
