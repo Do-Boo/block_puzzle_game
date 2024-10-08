@@ -1,43 +1,84 @@
-import 'package:block_puzzle_game/mainas.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'dart:math';
 
-class GameController extends GetxController with GetxServiceMixin {
+class GameController extends GetxController {
   static const int ROWS = 8;
   static const int COLS = 8;
 
-  var board = List.generate(ROWS, (_) => RxList<int>.filled(COLS, 0)).obs;
-  var availablePieces = <PuzzlePiece>[].obs;
+  var grid = List.generate(ROWS, (_) => List.filled(COLS, 0)).obs;
+  var puzzlePieces = <List<List<int>>>[].obs;
   var score = 0.obs;
-  var draggedPiece = Rx<PuzzlePiece?>(null);
-  var dragPosition = Rx<Offset>(Offset.zero);
-  late Size boardSize;
 
-  void setBoardSize(Size size) {
-    boardSize = size;
-  }
+  var draggedPiece = Rx<List<List<int>>?>(null);
+  var previewPiece = Rx<List<List<int>>?>(null);
+  var piecePositions = Rx<Offset>(Offset.zero);
+  var previewRow = Rx<int?>(null);
+  var previewCol = Rx<int?>(null);
+
+  static const List<List<List<int>>> TETROMINOS = [
+    [
+      [1, 1],
+      [1, 1]
+    ], // O
+    [
+      [1, 1, 1, 1]
+    ], // I
+    [
+      [1, 1, 1, 1]
+    ], // I
+    [
+      [1, 1, 1],
+      [0, 1, 0]
+    ], // T
+    [
+      [1, 1, 1],
+      [1, 0, 0]
+    ], // L
+    [
+      [1, 1, 1],
+      [0, 0, 1]
+    ], // J
+    [
+      [1, 1, 0],
+      [0, 1, 1]
+    ], // S
+    [
+      [0, 1, 1],
+      [1, 1, 0]
+    ], // Z
+    [
+      [1],
+      [1],
+      [1],
+      [1],
+    ], // Z
+  ];
 
   @override
   void onInit() {
     super.onInit();
-    generateNewPieces();
+    generateNewPuzzlePieces();
+    print('Game initialized');
   }
 
-  void updateBoard() {
-    board.refresh();
+  void generateNewPuzzlePieces() {
+    final random = Random();
+    puzzlePieces.value = List.generate(3, (_) {
+      final tetromino = TETROMINOS[random.nextInt(TETROMINOS.length)];
+      final color = random.nextInt(TETROMINOS.length) + 1;
+      return tetromino.map((row) => row.map((cell) => cell * color).toList()).toList();
+    });
+    print('새로운 퍼즐 조각 생성: $puzzlePieces');
   }
 
-  void generateNewPieces() {
-    availablePieces.value = List.generate(3, (_) => PuzzlePiece.random());
-  }
-
-  bool canPlacePiece(int row, int col, PuzzlePiece piece) {
-    for (int i = 0; i < piece.shape.length; i++) {
-      for (int j = 0; j < piece.shape[i].length; j++) {
-        if (piece.shape[i][j] != 0) {
+  bool canPlacePiece(int row, int col, List<List<int>> piece) {
+    for (int i = 0; i < piece.length; i++) {
+      for (int j = 0; j < piece[i].length; j++) {
+        if (piece[i][j] != 0) {
           int newRow = row + i;
           int newCol = col + j;
-          if (newRow < 0 || newRow >= ROWS || newCol < 0 || newCol >= COLS || board[newRow][newCol] != 0) {
+          if (newRow < 0 || newRow >= ROWS || newCol < 0 || newCol >= COLS || grid[newRow][newCol] != 0) {
             return false;
           }
         }
@@ -46,30 +87,32 @@ class GameController extends GetxController with GetxServiceMixin {
     return true;
   }
 
-  void placePiece(int row, int col, PuzzlePiece piece) {
+  void placePiece(int row, int col, List<List<int>> piece) {
     if (!canPlacePiece(row, col, piece)) {
-      Get.snackbar('오류', '이 위치에 조각을 놓을 수 없습니다.', snackPosition: SnackPosition.BOTTOM);
+      print('$row 행, $col 열에 조각을 놓을 수 없습니다');
       return;
     }
 
-    for (int i = 0; i < piece.shape.length; i++) {
-      for (int j = 0; j < piece.shape[i].length; j++) {
-        if (piece.shape[i][j] != 0) {
-          board[row + i][col + j] = piece.color;
+    for (int i = 0; i < piece.length; i++) {
+      for (int j = 0; j < piece[i].length; j++) {
+        if (piece[i][j] != 0) {
+          grid[row + i][col + j] = piece[i][j];
         }
       }
     }
-    updateBoard();
-    availablePieces.remove(piece);
-    if (availablePieces.isEmpty) {
-      generateNewPieces();
+    print('$row 행, $col 열에 조각을 놓았습니다');
+    puzzlePieces.remove(piece);
+    if (puzzlePieces.isEmpty) {
+      generateNewPuzzlePieces();
     }
     checkLines();
-    checkGameOver();
-    setDraggedPiece(null);
-    updateDragPosition(Offset.zero);
+    update();
+  }
 
-    Get.snackbar('성공', '조각이 성공적으로 배치되었습니다!', snackPosition: SnackPosition.BOTTOM);
+  void updatePreviewPiecePosition(int touchedRow, int touchedCol) {
+    previewRow.value = touchedRow;
+    previewCol.value = touchedCol;
+    update();
   }
 
   void checkLines() {
@@ -77,74 +120,42 @@ class GameController extends GetxController with GetxServiceMixin {
 
     // Check rows
     for (int row = 0; row < ROWS; row++) {
-      if (board[row].every((cell) => cell != 0)) {
+      if (grid[row].every((cell) => cell != 0)) {
         linesCleared++;
-        board[row] = RxList<int>.filled(COLS, 0);
+        grid[row] = List.filled(COLS, 0);
       }
     }
 
     // Check columns
     for (int col = 0; col < COLS; col++) {
-      if (board.every((row) => row[col] != 0)) {
+      if (grid.every((row) => row[col] != 0)) {
         linesCleared++;
         for (int row = 0; row < ROWS; row++) {
-          board[row][col] = 0;
+          grid[row][col] = 0;
         }
       }
     }
 
     if (linesCleared > 0) {
       score.value += linesCleared * 100;
-      updateBoard();
+      print('$linesCleared lines cleared. New score: $score');
     }
   }
 
-  bool isGameOver() {
-    for (var piece in availablePieces) {
-      for (int row = 0; row < ROWS; row++) {
-        for (int col = 0; col < COLS; col++) {
-          if (canPlacePiece(row, col, piece)) {
-            return false;
-          }
-        }
-      }
+  Color getColor(int value) {
+    switch (value) {
+      case 1:
+        return const Color(0xFFFF4136); // Red
+      case 2:
+        return const Color(0xFF0074D9); // Blue
+      case 3:
+        return const Color(0xFF2ECC40); // Green
+      case 4:
+        return const Color(0xFFFFDC00); // Yellow
+      case 5:
+        return const Color(0xFFB10DC9); // Purple
+      default:
+        return const Color(0xFFFFFFFF); // White
     }
-    return true;
-  }
-
-  void checkGameOver() {
-    if (isGameOver()) {
-      Get.defaultDialog(
-        title: '게임 오버',
-        content: Text('최종 점수: ${score.value}'),
-        actions: [
-          TextButton(
-            child: const Text('다시 시작'),
-            onPressed: () {
-              Get.back();
-              resetGame();
-            },
-          ),
-        ],
-      );
-    }
-  }
-
-  void resetGame() {
-    board.value = List.generate(ROWS, (_) => RxList.filled(COLS, 0));
-    score.value = 0;
-    generateNewPieces();
-  }
-
-  void updateDragPosition(Offset position) {
-    // AppBar 높이와 보드 위치를 고려하여 보정
-    final boardPosition = position - Offset(0, AppBar().preferredSize.height);
-    if (boardPosition.dx >= 0 && boardPosition.dx <= boardSize.width && boardPosition.dy >= 0 && boardPosition.dy <= boardSize.height) {
-      dragPosition.value = boardPosition;
-    }
-  }
-
-  void setDraggedPiece(PuzzlePiece? piece) {
-    draggedPiece.value = piece;
   }
 }
