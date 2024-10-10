@@ -26,7 +26,7 @@ class MyApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('ko', ''),
+      locale: const Locale('en', ''),
       home: SafeArea(
         child: GameWidget<BlockPuzzleGame>(
           game: BlockPuzzleGame(),

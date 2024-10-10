@@ -19,7 +19,7 @@ class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
     await super.onLoad();
 
     cellSize = Vector2(size.x / Constants.COLS, size.x / Constants.COLS);
-    gridPosition = Vector2(0, size.y - cellSize.y * Constants.ROWS);
+    gridPosition = Vector2(0, cellSize.y);
 
     gameState = GameState();
     pieceGenerator = PieceGenerator();
@@ -37,13 +37,15 @@ class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
 
   void spawnPieces() {
     children.whereType<PieceComponent>().forEach((component) => component.removeFromParent());
+    final double startX = (size.x - cellSize.x) / 3; // 조각을 화면 중앙에 배치
+    final double startY = size.y - cellSize.y * 4; // 화면 하단에 위치
     for (var i = 0; i < 3; i++) {
       final piece = pieceGenerator.generatePiece();
       gameState.addPiece(piece);
       final pieceComponent = PieceComponent(
         piece: piece,
         cellSize: cellSize,
-        position: Vector2(i * (size.x / 3), 0),
+        position: Vector2(startX * i + cellSize.x * 1.2, startY),
         gridPosition: gridPosition,
         game: this,
       );
