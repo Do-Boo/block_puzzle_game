@@ -4,7 +4,7 @@ class GameState {
   final List<List<int>> _grid;
   final List<List<List<int>>> _pieces;
   int _score;
-  int _consecutiveClears; // 연속으로 줄을 완성한 횟수
+  int _consecutiveClears = 0;
 
   GameState()
       : _grid = List.generate(Constants.ROWS, (_) => List.filled(Constants.COLS, 0).toList()),
@@ -18,6 +18,19 @@ class GameState {
 
   void addPiece(List<List<int>> piece) {
     _pieces.add(piece);
+  }
+
+  bool canPlaceAnyPiece() {
+    for (var piece in _pieces) {
+      for (int row = 0; row <= Constants.ROWS - piece.length; row++) {
+        for (int col = 0; col <= Constants.COLS - piece[0].length; col++) {
+          if (canPlacePiece(row, col, piece)) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
   }
 
   bool canPlacePiece(int row, int col, List<List<int>> piece) {
@@ -35,6 +48,30 @@ class GameState {
     return true;
   }
 
+  List<int> getLinesToClear() {
+    List<int> linesToClear = [];
+
+    // 가로 줄 체크
+    for (int row = 0; row < Constants.ROWS; row++) {
+      if (isFullRow(row)) {
+        linesToClear.add(row);
+      }
+    }
+
+    // 세로 줄 체크
+    for (int col = 0; col < Constants.COLS; col++) {
+      if (isFullColumn(col)) {
+        linesToClear.add(Constants.ROWS + col); // 세로 줄은 ROWS를 더해서 구분
+      }
+    }
+
+    return linesToClear;
+  }
+
+  bool isFullRow(int row) => _grid[row].every((cell) => cell != 0);
+
+  bool isFullColumn(int col) => _grid.every((row) => row[col] != 0);
+
   void placePiece(int row, int col, List<List<int>> piece) {
     int pieceScore = 0;
     for (int i = 0; i < piece.length; i++) {
@@ -50,38 +87,20 @@ class GameState {
   }
 
   int checkLines() {
-    int linesCleared = 0;
+    List<int> linesToClear = getLinesToClear();
+    int linesCleared = linesToClear.length;
     int lineScore = 0;
 
-    // 가로 줄 검사
-    for (int row = 0; row < Constants.ROWS; row++) {
-      bool isFullRow = true;
-      for (int col = 0; col < Constants.COLS; col++) {
-        if (_grid[row][col] == 0) {
-          isFullRow = false;
-          break;
-        }
-      }
-      if (isFullRow) {
-        linesCleared++;
+    for (int line in linesToClear) {
+      if (line < Constants.ROWS) {
+        // 가로 줄 지우기
         for (int col = 0; col < Constants.COLS; col++) {
-          _grid[row][col] = 0;
+          _grid[line][col] = 0;
           lineScore += 10; // 한 칸 당 10점
         }
-      }
-    }
-
-    // 세로 줄 검사
-    for (int col = 0; col < Constants.COLS; col++) {
-      bool isFullCol = true;
-      for (int row = 0; row < Constants.ROWS; row++) {
-        if (_grid[row][col] == 0) {
-          isFullCol = false;
-          break;
-        }
-      }
-      if (isFullCol) {
-        linesCleared++;
+      } else {
+        // 세로 줄 지우기
+        int col = line - Constants.ROWS;
         for (int row = 0; row < Constants.ROWS; row++) {
           _grid[row][col] = 0;
           lineScore += 10; // 한 칸 당 10점
@@ -98,5 +117,13 @@ class GameState {
 
     _score += lineScore;
     return linesCleared;
+  }
+
+  void clearGrid() {
+    for (int row = 0; row < Constants.ROWS; row++) {
+      for (int col = 0; col < Constants.COLS; col++) {
+        _grid[row][col] = 0;
+      }
+    }
   }
 }

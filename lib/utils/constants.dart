@@ -57,6 +57,11 @@ class Constants {
       [0, 1, 1],
       [1, 1, 0]
     ], // Z
+    [
+      [1, 1, 1],
+      [1, 1, 1],
+      [1, 1, 1]
+    ], // Z
   ];
 
   static Color getColor(int value) {

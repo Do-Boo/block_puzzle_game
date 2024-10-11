@@ -30,10 +30,10 @@ class MyApp extends StatelessWidget {
       home: SafeArea(
         child: GameWidget<BlockPuzzleGame>(
           game: BlockPuzzleGame(),
-          // overlayBuilderMap: {
-          //   'gameOver': (_, game) => GameOverOverlay(game: game),
-          // },
-          // initialActiveOverlays: const [],
+          overlayBuilderMap: {
+            'gameOver': (_, game) => GameOverOverlay(game: game),
+          },
+          initialActiveOverlays: const [],
         ),
       ),
     );
@@ -61,7 +61,7 @@ class GameOverOverlay extends StatelessWidget {
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
-                // game.reset(); // 여기서 직접 reset 호출
+                game.reset(); // 게임을 다시 시작
               },
               child: Text(AppLocalizations.current.restart),
             ),

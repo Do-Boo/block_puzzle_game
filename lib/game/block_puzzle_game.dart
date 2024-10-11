@@ -1,3 +1,4 @@
+import 'package:block_puzzle_game/components/particle_component.dart';
 import 'package:flame/game.dart';
 import '../components/grid_component.dart';
 import '../components/piece_component.dart';
@@ -6,6 +7,7 @@ import '../components/score_component.dart';
 import '../utils/game_state.dart';
 import '../utils/piece_generator.dart';
 import '../utils/constants.dart';
+import 'package:flutter/services.dart';
 
 class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
   late GameState gameState;
@@ -13,13 +15,14 @@ class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
   late final Vector2 gridPosition;
   late final Vector2 cellSize;
   late GridComponent gridComponent;
+  bool isGameOver = false;
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
 
     cellSize = Vector2(size.x / Constants.COLS, size.x / Constants.COLS);
-    gridPosition = Vector2(0, cellSize.y);
+    gridPosition = Vector2(0, cellSize.y * 2);
 
     gameState = GameState();
     pieceGenerator = PieceGenerator();
@@ -36,9 +39,11 @@ class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
   }
 
   void spawnPieces() {
+    if (isGameOver) return;
+
     children.whereType<PieceComponent>().forEach((component) => component.removeFromParent());
     final double startX = (size.x - cellSize.x) / 3; // 조각을 화면 중앙에 배치
-    final double startY = size.y - cellSize.y * 4; // 화면 하단에 위치
+    final double startY = size.y - cellSize.y * 3; // 화면 하단에 위치
     for (var i = 0; i < 3; i++) {
       final piece = pieceGenerator.generatePiece();
       gameState.addPiece(piece);
@@ -51,20 +56,93 @@ class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
       );
       add(pieceComponent);
     }
+
+    // 게임 오버 상태 확인
+    if (!gameState.canPlaceAnyPiece()) {
+      isGameOver = true;
+      overlays.add('gameOver');
+    }
+  }
+
+  void addBlockParticles(Vector2 position, Color color) {
+    final particleComponent = BlockParticle(
+      position: position,
+      color: color,
+    )..priority = 10; // 높은 우선순위 설정
+    add(particleComponent);
   }
 
   Future<void> placePiece(int row, int col, List<List<int>> piece) async {
+    if (isGameOver) return;
+
     if (gameState.canPlacePiece(row, col, piece)) {
       gameState.placePiece(row, col, piece);
       children.whereType<PreviewComponent>().forEach((component) => component.clearPreview());
-      if (gameState.checkLines() > 0) {
-        // Handle line clearing (maybe add score, play sound, etc.)
+
+      HapticFeedback.lightImpact();
+
+      List<int> linesToClear = gameState.getLinesToClear();
+      if (linesToClear.isNotEmpty) {
+        for (int line in linesToClear) {
+          if (line < Constants.ROWS) {
+            // 가로 줄 이펙트
+            for (int j = 0; j < Constants.COLS; j++) {
+              Vector2 particlePosition = Vector2(
+                gridPosition.x + j * cellSize.x + cellSize.x / 2,
+                gridPosition.y + line * cellSize.y + cellSize.y / 2,
+              );
+              add(BlockParticle(
+                position: particlePosition,
+                color: Constants.getColor(gameState.grid[line][j]),
+              ));
+            }
+          } else {
+            // 세로 줄 이펙트
+            int col = line - Constants.ROWS;
+            for (int i = 0; i < Constants.ROWS; i++) {
+              Vector2 particlePosition = Vector2(
+                gridPosition.x + col * cellSize.x + cellSize.x / 2,
+                gridPosition.y + i * cellSize.y + cellSize.y / 2,
+              );
+              add(BlockParticle(
+                position: particlePosition,
+                color: Constants.getColor(gameState.grid[i][col]),
+              ));
+            }
+          }
+        }
+
+        gameState.checkLines();
       }
+
       gridComponent.updateGrid();
       children.whereType<PieceComponent>().firstWhere((component) => component.piece == piece).removeFromParent();
       if (gameState.pieces.isEmpty) {
         spawnPieces();
       }
+    } else {
+      // 게임 오버 조건
+      isGameOver = true;
+      overlays.add('gameOver');
+    }
+  }
+
+  void reset() {
+    isGameOver = false;
+    gameState = GameState();
+    spawnPieces();
+    overlays.remove('gameOver');
+  }
+
+  void addLineParticles(Vector2 startPosition, Vector2 endPosition, Color color) {
+    // 줄 전체에 퍼지도록 여러 개의 파티클 생성
+    for (double x = startPosition.x; x <= endPosition.x; x += cellSize.x / 4) {
+      // 더 촘촘하게 파티클 생성
+      final particleComponent = BlockParticle(
+        position: Vector2(x, startPosition.y),
+        color: color,
+      );
+      add(particleComponent);
     }
   }
 

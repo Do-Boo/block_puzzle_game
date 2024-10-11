@@ -21,7 +21,8 @@ class PieceComponent extends PositionComponent with DragCallbacks {
     required this.gridPosition,
     required this.game,
   }) : super(position: position) {
-    size = Vector2(piece[0].length * cellSize.x, piece.length * cellSize.y) * initialScale;
+    // 터치 범위를 넓히기 위해 size를 조정
+    size = Vector2(piece[0].length * cellSize.x, piece.length * cellSize.y) * initialScale * 2;
     originalPosition = position.clone(); // 초기 위치를 저장
   }
 
@@ -62,8 +63,8 @@ class PieceComponent extends PositionComponent with DragCallbacks {
   @override
   void onDragUpdate(DragUpdateEvent event) {
     position = event.canvasPosition - dragDelta;
-    position.y -= size.y;
-    position.x -= piece[0].length * cellSize.x / 2;
+    position.x -= size.x - piece[0].length * cellSize.x / 2;
+    position.y -= size.y + cellSize.y;
     final row = ((position.y - gridPosition.y) / cellSize.y).floor();
     final col = ((position.x - gridPosition.x) / cellSize.x).floor();
     game.updatePreview(row, col, piece);
@@ -81,6 +82,6 @@ class PieceComponent extends PositionComponent with DragCallbacks {
       game.placePiece(row, col, piece);
     }
     isDragging = false; // 드래그 종료 시 상태 변경
-    size = Vector2(piece[0].length * cellSize.x, piece.length * cellSize.y) * initialScale; // 드래그 종료 시 다시 축소
+    size = Vector2(piece[0].length * cellSize.x, piece.length * cellSize.y) * initialScale * 2; // 드래그 종료 시 다시 축소
   }
 }
