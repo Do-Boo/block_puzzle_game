@@ -5,12 +5,20 @@ import '../utils/constants.dart';
 
 class GridComponent extends PositionComponent {
   final Vector2 cellSize;
-  final GameState gameState;
+  late GameState gameState;
 
-  GridComponent({required Vector2 position, required this.cellSize, required this.gameState}) : super(position: position);
+  GridComponent({required Vector2 position, required this.cellSize, required this.gameState}) : super(position: position) {
+    priority = -1;
+  }
 
   @override
   void render(Canvas canvas) {
+    super.render(canvas);
+    print('Rendering GridComponent'); // 로그 추가
+    _drawGrid(canvas);
+  }
+
+  void _drawGrid(Canvas canvas) {
     for (int row = 0; row < Constants.ROWS; row++) {
       for (int col = 0; col < Constants.COLS; col++) {
         final rect = Rect.fromLTWH(col * cellSize.x, row * cellSize.y, cellSize.x, cellSize.y);
@@ -27,10 +35,15 @@ class GridComponent extends PositionComponent {
     }
   }
 
+  void resetGrid() {
+    print('Resetting grid');
+    gameState.clearGrid();
+    // gameState.initializeGrid(); // 게임 상태 초기화
+    updateGrid();
+  }
+
   void updateGrid() {
-    // This method triggers a re-render of the grid
-    // It's called after a piece is placed
-    // No need to do anything here, as the render method
-    // will use the updated gameState
+    print('Updating grid');
+    print('Grid state in GridComponent: ${gameState.grid}');
   }
 }

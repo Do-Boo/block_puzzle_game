@@ -57,8 +57,13 @@ class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
       add(pieceComponent);
     }
 
-    // 게임 오버 상태 확인
+    checkGameOver();
+  }
+
+  void checkGameOver() {
+    print('Checking game over...'); // 디버그 로그
     if (!gameState.canPlaceAnyPiece()) {
+      print('Game over condition met!'); // 디버그 로그
       isGameOver = true;
       overlays.add('gameOver');
     }
@@ -77,6 +82,8 @@ class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
 
     if (gameState.canPlacePiece(row, col, piece)) {
       gameState.placePiece(row, col, piece);
+      gridComponent.updateGrid();
+      print('Grid component updated'); // 로그 추가
       children.whereType<PreviewComponent>().forEach((component) => component.clearPreview());
 
       HapticFeedback.lightImpact();
@@ -113,12 +120,21 @@ class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
         }
 
         gameState.checkLines();
+        // 라인 클리어 후 그리드 다시 업데이트
+        gridComponent.updateGrid();
       }
 
-      gridComponent.updateGrid();
       children.whereType<PieceComponent>().firstWhere((component) => component.piece == piece).removeFromParent();
+
+      // 모든 PieceComponent의 우선순위 재설정
+      children.whereType<PieceComponent>().forEach((component) {
+        component.priority = 10;
+      });
+
       if (gameState.pieces.isEmpty) {
         spawnPieces();
+      } else {
+        checkGameOver();
       }
     } else {
       // 게임 오버 조건
@@ -130,6 +146,9 @@ class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
   void reset() {
     isGameOver = false;
     gameState = GameState();
+    gridComponent.gameState = gameState;
+    gridComponent.resetGrid();
+    children.whereType<PieceComponent>().forEach((component) => component.removeFromParent());
     spawnPieces();
     overlays.remove('gameOver');
   }

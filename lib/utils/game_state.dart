@@ -1,7 +1,7 @@
 import 'constants.dart';
 
 class GameState {
-  final List<List<int>> _grid;
+  late List<List<int>> _grid;
   final List<List<List<int>>> _pieces;
   int _score;
   int _consecutiveClears = 0;
@@ -10,11 +10,20 @@ class GameState {
       : _grid = List.generate(Constants.ROWS, (_) => List.filled(Constants.COLS, 0).toList()),
         _pieces = [],
         _score = 0,
-        _consecutiveClears = 0;
+        _consecutiveClears = 0 {
+    initializeGrid();
+  }
 
   List<List<int>> get grid => _grid;
   List<List<List<int>>> get pieces => _pieces;
   int get score => _score;
+
+  void initializeGrid() {
+    _grid = List.generate(
+      Constants.ROWS,
+      (_) => List.filled(Constants.COLS, 0),
+    );
+  }
 
   void addPiece(List<List<int>> piece) {
     _pieces.add(piece);
@@ -34,14 +43,13 @@ class GameState {
   }
 
   bool canPlacePiece(int row, int col, List<List<int>> piece) {
+    if (row < 0 || col < 0 || row + piece.length > Constants.ROWS || col + piece[0].length > Constants.COLS) {
+      return false;
+    }
     for (int i = 0; i < piece.length; i++) {
       for (int j = 0; j < piece[i].length; j++) {
-        if (piece[i][j] != 0) {
-          int newRow = row + i;
-          int newCol = col + j;
-          if (newRow < 0 || newRow >= Constants.ROWS || newCol < 0 || newCol >= Constants.COLS || _grid[newRow][newCol] != 0) {
-            return false;
-          }
+        if (piece[i][j] != 0 && _grid[row + i][col + j] != 0) {
+          return false;
         }
       }
     }
@@ -68,9 +76,15 @@ class GameState {
     return linesToClear;
   }
 
-  bool isFullRow(int row) => _grid[row].every((cell) => cell != 0);
+  bool isFullRow(int row) {
+    if (row < 0 || row >= Constants.ROWS) return false;
+    return _grid[row].every((cell) => cell != 0);
+  }
 
-  bool isFullColumn(int col) => _grid.every((row) => row[col] != 0);
+  bool isFullColumn(int col) {
+    if (col < 0 || col >= Constants.COLS) return false;
+    return _grid.every((row) => row[col] != 0);
+  }
 
   void placePiece(int row, int col, List<List<int>> piece) {
     int pieceScore = 0;
@@ -84,6 +98,7 @@ class GameState {
     }
     _score += pieceScore;
     _pieces.remove(piece);
+    print('Piece placed in GameState. Updated grid: $_grid'); // 디버그 로그 추가
   }
 
   int checkLines() {
@@ -125,5 +140,11 @@ class GameState {
         _grid[row][col] = 0;
       }
     }
+    print('Grid cleared in GameState. Current grid: $_grid'); // 디버그 로그 추가
+  }
+
+  void resetGrid() {
+    initializeGrid();
+    print('Grid reset in GameState. Current grid: $_grid'); // 디버그 로그
   }
 }

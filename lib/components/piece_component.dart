@@ -24,6 +24,7 @@ class PieceComponent extends PositionComponent with DragCallbacks {
     // 터치 범위를 넓히기 위해 size를 조정
     size = Vector2(piece[0].length * cellSize.x, piece.length * cellSize.y) * initialScale * 2;
     originalPosition = position.clone(); // 초기 위치를 저장
+    priority = 100; // 우선순위를 더 높게 설정
   }
 
   @override
