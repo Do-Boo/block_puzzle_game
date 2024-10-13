@@ -38,7 +38,6 @@ class GridComponent extends PositionComponent {
   void resetGrid() {
     print('Resetting grid');
     gameState.clearGrid();
-    // gameState.initializeGrid(); // 게임 상태 초기화
     updateGrid();
   }
 
