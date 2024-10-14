@@ -50,20 +50,38 @@ class GameOverOverlay extends StatelessWidget {
     return Center(
       child: Container(
         padding: const EdgeInsets.all(20),
-        color: Colors.black.withOpacity(0.8),
+        decoration: BoxDecoration(
+          color: const Color(0xFF392A25),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              AppLocalizations.current.gameOver,
-              style: const TextStyle(color: Colors.white, fontSize: 30),
+            const Text(
+              'Game Over',
+              style: TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
-                game.reset(); // 게임을 다시 시작
+                game.reset();
               },
-              child: Text(AppLocalizations.current.restart),
+              style: ElevatedButton.styleFrom(
+                foregroundColor: Colors.white,
+                backgroundColor: const Color(0xFF6D4C41),
+                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+              ),
+              child: const Text('Restart', style: TextStyle(fontSize: 18)),
             ),
           ],
         ),

@@ -1,5 +1,7 @@
 import 'package:block_puzzle_game/components/particle_component.dart';
 import 'package:flame/game.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/material.dart';
 import '../components/grid_component.dart';
 import '../components/piece_component.dart';
 import '../components/preview_component.dart';
@@ -7,7 +9,6 @@ import '../components/score_component.dart';
 import '../utils/game_state.dart';
 import '../utils/piece_generator.dart';
 import '../utils/constants.dart';
-import 'package:flutter/services.dart';
 
 class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
   late GameState gameState;
@@ -16,6 +17,9 @@ class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
   late final Vector2 cellSize;
   late GridComponent gridComponent;
   bool isGameOver = false;
+
+  static const Color kBackgroundColor = Color(0xFF533C36);
+  static const Color kAccentColor = Color(0xFF392A25);
 
   @override
   Future<void> onLoad() async {
@@ -29,6 +33,32 @@ class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
 
     await _addComponents();
     spawnPieces();
+  }
+
+  @override
+  void render(Canvas canvas) {
+    _drawBackground(canvas);
+    super.render(canvas);
+  }
+
+  void _drawBackground(Canvas canvas) {
+    final rect = Rect.fromLTWH(0, 0, size.x, size.y);
+    final paint = Paint()..color = kBackgroundColor;
+    canvas.drawRect(rect, paint);
+
+    // 배경 패턴 그리기
+    final patternPaint = Paint()
+      ..color = Colors.black.withOpacity(0.05)
+      ..strokeWidth = 1;
+    for (int i = 0; i < size.x; i += 20) {
+      for (int j = 0; j < size.y; j += 20) {
+        canvas.drawLine(
+          Offset(i.toDouble(), j.toDouble()),
+          Offset((i + 20).toDouble(), (j + 20).toDouble()),
+          patternPaint,
+        );
+      }
+    }
   }
 
   Future<void> _addComponents() async {

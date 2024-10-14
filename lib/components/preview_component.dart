@@ -23,7 +23,7 @@ class PreviewComponent extends PositionComponent {
               cellSize.x,
               cellSize.y,
             );
-            canvas.drawRect(rect, Paint()..color = Colors.white.withOpacity(0.5));
+            canvas.drawRect(rect, Paint()..color = Colors.white.withOpacity(0.3));
           }
         }
       }
