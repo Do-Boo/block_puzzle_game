@@ -1,8 +1,12 @@
+// import 'package:block_puzzle_game/utils/color_extensions.dart';
+import 'package:block_puzzle_game/utils/block_3d.dart';
+import 'package:block_puzzle_game/utils/color_extensions.dart';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flutter/material.dart';
 import '../game/block_puzzle_game.dart';
 import '../utils/constants.dart';
+import 'dart:math' show pi;
 
 class PieceComponent extends PositionComponent with DragCallbacks {
   final List<List<int>> piece;
@@ -31,21 +35,14 @@ class PieceComponent extends PositionComponent with DragCallbacks {
   void render(Canvas canvas) {
     canvas.save();
     if (!isDragging) {
-      canvas.scale(initialScale, initialScale); // 드래그 중이 아닐 때만 스케일링
+      canvas.scale(initialScale, initialScale);
     }
     for (int row = 0; row < piece.length; row++) {
       for (int col = 0; col < piece[row].length; col++) {
         if (piece[row][col] != 0) {
           final rect = Rect.fromLTWH(col * cellSize.x, row * cellSize.y, cellSize.x, cellSize.y);
-          // 향후 이미지 에셋을 사용하여 렌더링할 수 있도록 준비
-          // 예: canvas.drawImage(image, rect.topLeft, paint);
-          canvas.drawRect(rect, Paint()..color = Constants.getColor(piece[row][col]));
-          canvas.drawRect(
-              rect,
-              Paint()
-                ..color = Colors.black
-                ..style = PaintingStyle.stroke
-                ..strokeWidth = 1);
+          final color = Constants.getColor(piece[row][col]);
+          CartoonBlockPainter.paintBlock(canvas, rect, color);
         }
       }
     }

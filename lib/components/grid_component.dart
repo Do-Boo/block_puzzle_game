@@ -1,3 +1,4 @@
+import 'package:block_puzzle_game/utils/block_3d.dart';
 import 'package:block_puzzle_game/utils/game_state.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
@@ -23,14 +24,19 @@ class GridComponent extends PositionComponent {
       for (int col = 0; col < Constants.COLS; col++) {
         final rect = Rect.fromLTWH(col * cellSize.x, row * cellSize.y, cellSize.x, cellSize.y);
         final cellValue = gameState.grid[row][col];
-        final color = cellValue == 0 ? Colors.grey.withOpacity(0.3) : Constants.getColor(cellValue);
-        canvas.drawRect(rect, Paint()..color = color);
-        canvas.drawRect(
-            rect,
-            Paint()
-              ..color = Colors.black
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = 1);
+        if (cellValue != 0) {
+          final color = Constants.getColor(cellValue);
+          CartoonBlockPainter.paintBlock(canvas, rect, color);
+        } else {
+          // 빈 셀 그리기 (카툰 스타일)
+          canvas.drawRect(rect, Paint()..color = Colors.grey.withOpacity(0.1));
+          canvas.drawRect(
+              rect,
+              Paint()
+                ..color = Colors.black.withOpacity(0.3)
+                ..style = PaintingStyle.stroke
+                ..strokeWidth = 2);
+        }
       }
     }
   }
