@@ -6,9 +6,12 @@ import '../components/grid_component.dart';
 import '../components/piece_component.dart';
 import '../components/preview_component.dart';
 import '../components/score_component.dart';
+import '../utils/block_crush_effect.dart';
+import '../utils/cartoon_spark_effect.dart';
 import '../utils/game_state.dart';
 import '../utils/piece_generator.dart';
 import '../utils/constants.dart';
+import '../utils/score_popup_effect.dart';
 
 class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
   late GameState gameState;
@@ -113,7 +116,7 @@ class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
     if (gameState.canPlacePiece(row, col, piece)) {
       gameState.placePiece(row, col, piece);
       gridComponent.updateGrid();
-      print('Grid component updated'); // 로그 추가
+      print('Grid component updated');
       children.whereType<PreviewComponent>().forEach((component) => component.clearPreview());
 
       HapticFeedback.lightImpact();
@@ -124,39 +127,47 @@ class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
           if (line < Constants.ROWS) {
             // 가로 줄 이펙트
             for (int j = 0; j < Constants.COLS; j++) {
-              Vector2 particlePosition = Vector2(
+              Vector2 sparkPosition = Vector2(
                 gridPosition.x + j * cellSize.x + cellSize.x / 2,
                 gridPosition.y + line * cellSize.y + cellSize.y / 2,
               );
-              add(BlockParticle(
-                position: particlePosition,
+              // add(BlockCrushEffect(position: sparkPosition, color: Constants.getColor(gameState.grid[line][j]), size: cellSize));
+              add(CartoonSparkEffect(
+                position: sparkPosition,
                 color: Constants.getColor(gameState.grid[line][j]),
+              ));
+              add(ScorePopup(
+                position: sparkPosition + Vector2(cellSize.x, 0), // 블록의 오른쪽에 표시
+                score: 10, // 각 블록당 점수, 필요에 따라 조정
               ));
             }
           } else {
             // 세로 줄 이펙트
             int col = line - Constants.ROWS;
             for (int i = 0; i < Constants.ROWS; i++) {
-              Vector2 particlePosition = Vector2(
+              Vector2 sparkPosition = Vector2(
                 gridPosition.x + col * cellSize.x + cellSize.x / 2,
                 gridPosition.y + i * cellSize.y + cellSize.y / 2,
               );
-              add(BlockParticle(
-                position: particlePosition,
+              // add(BlockCrushEffect(position: sparkPosition, color: Constants.getColor(gameState.grid[i][col]), size: cellSize));
+              add(CartoonSparkEffect(
+                position: sparkPosition,
                 color: Constants.getColor(gameState.grid[i][col]),
+              ));
+              add(ScorePopup(
+                position: sparkPosition + Vector2(cellSize.x, 0), // 블록의 오른쪽에 표시
+                score: 10, // 각 블록당 점수, 필요에 따라 조정
               ));
             }
           }
         }
 
         gameState.checkLines();
-        // 라인 클리어 후 그리드 다시 업데이트
         gridComponent.updateGrid();
       }
 
       children.whereType<PieceComponent>().firstWhere((component) => component.piece == piece).removeFromParent();
 
-      // 모든 PieceComponent의 우선순위 재설정
       children.whereType<PieceComponent>().forEach((component) {
         component.priority = 10;
       });
@@ -167,7 +178,6 @@ class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
         checkGameOver();
       }
     } else {
-      // 게임 오버 조건
       isGameOver = true;
       overlays.add('gameOver');
     }

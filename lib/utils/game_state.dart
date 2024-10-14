@@ -86,19 +86,19 @@ class GameState {
     return _grid.every((row) => row[col] != 0);
   }
 
-  void placePiece(int row, int col, List<List<int>> piece) {
+  int placePiece(int row, int col, List<List<int>> piece) {
     int pieceScore = 0;
     for (int i = 0; i < piece.length; i++) {
       for (int j = 0; j < piece[i].length; j++) {
         if (piece[i][j] != 0) {
           _grid[row + i][col + j] = piece[i][j];
-          pieceScore += 10; // 한 칸 당 10점
+          pieceScore += 20; // 각 블록당 10점
         }
       }
     }
     _score += pieceScore;
     _pieces.remove(piece);
-    print('Piece placed in GameState. Updated grid: $_grid'); // 디버그 로그 추가
+    return pieceScore;
   }
 
   int checkLines() {
