@@ -1,11 +1,9 @@
-// import 'package:block_puzzle_game/utils/color_extensions.dart';
-import 'package:block_puzzle_game/utils/block_3d.dart';
+import 'dart:ui' as ui;
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flutter/material.dart';
 import '../game/block_puzzle_game.dart';
 import '../utils/constants.dart';
-import 'dart:math' show pi;
 
 class PieceComponent extends PositionComponent with DragCallbacks {
   final List<List<int>> piece;
@@ -14,7 +12,7 @@ class PieceComponent extends PositionComponent with DragCallbacks {
   final BlockPuzzleGame game;
   Vector2 dragDelta = Vector2.zero();
   late Vector2 originalPosition;
-  static const double initialScale = 0.4; // 초기 크기 비율
+  static const double initialScale = 0.45; // 초기 크기 비율
   bool isDragging = false; // 드래그 상태를 추적
 
   PieceComponent({
@@ -27,7 +25,7 @@ class PieceComponent extends PositionComponent with DragCallbacks {
     // 터치 범위를 넓히기 위해 size를 조정
     size = Vector2(piece[0].length * cellSize.x, piece.length * cellSize.y) * initialScale * 2;
     originalPosition = position.clone(); // 초기 위치를 저장
-    priority = 100; // 우선순위를 더 높게 설정
+    priority = 100; // 우선위를 더 높게 설정
   }
 
   @override
@@ -36,12 +34,66 @@ class PieceComponent extends PositionComponent with DragCallbacks {
     if (!isDragging) {
       canvas.scale(initialScale, initialScale);
     }
+    const double gap = 2.0; // 셀 간의 간격
+
     for (int row = 0; row < piece.length; row++) {
       for (int col = 0; col < piece[row].length; col++) {
         if (piece[row][col] != 0) {
-          final rect = Rect.fromLTWH(col * cellSize.x, row * cellSize.y, cellSize.x, cellSize.y);
+          // 셀 크기를 줄여서 간격 조정
+          final rect = Rect.fromLTWH(
+              col * (cellSize.x + gap), // x 위치 조정
+              row * (cellSize.y + gap), // y 위치 조정
+              cellSize.x - gap, // 너비 줄이기
+              cellSize.y - gap // 높이 줄이기
+              );
           final color = Constants.getColor(piece[row][col]);
-          CartoonBlockPainter.paintBlock(canvas, rect, color);
+
+          // 그리드 셀과 동일한 스타일 적용
+          final gradient = ui.Gradient.radial(
+            rect.center,
+            rect.width / 2,
+            [
+              color.withOpacity(0.9), // 더 진한 색상
+              color,
+              color.withOpacity(1.0),
+            ],
+            [0.0, 0.7, 1.0],
+          );
+
+          final shadowPaint = Paint()
+            ..color = Colors.black.withOpacity(0.5) // 더 진한 그림자
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+
+          // 그림자
+          canvas.drawRRect(RRect.fromRectAndRadius(rect.translate(3, 3), const Radius.circular(8)), shadowPaint);
+
+          // 셀
+          canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(8)), Paint()..shader = gradient);
+
+          // 테두리
+          final borderPaint = Paint()
+            ..color = Colors.black
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 3; // 더 두꺼운 테두리
+          canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(8)), borderPaint);
+
+          // 하이라이트
+          final highlightPaint = Paint()
+            ..color = Colors.white.withOpacity(0.4) // 더 밝은 하이라이트
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2;
+          canvas.drawRRect(RRect.fromRectAndRadius(rect.deflate(2), const Radius.circular(6)), highlightPaint);
+
+          // 추가 하이라이트 (볼록한 느낌 강화)
+          final highlightGradient = ui.Gradient.linear(
+            rect.topLeft,
+            rect.bottomRight,
+            [Colors.white.withOpacity(0.4), Colors.white.withOpacity(0.0)], // 더 강한 하이라이트
+          );
+          canvas.drawRRect(
+            RRect.fromRectAndRadius(rect.deflate(4), const Radius.circular(4)),
+            Paint()..shader = highlightGradient,
+          );
         }
       }
     }

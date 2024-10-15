@@ -14,13 +14,14 @@ import '../components/particle_component.dart';
 
 class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
   late GameState gameState;
-  late final PieceGenerator pieceGenerator;
+  late PieceGenerator pieceGenerator;
   late final Vector2 gridPosition;
   late final Vector2 cellSize;
   late Vector2 gridSize;
   final double horizontalPadding = 16.0;
   late GridComponent gridComponent;
   bool isGameOver = false;
+  List<List<List<int>>> currentPieces = [];
 
   static const Color kBackgroundColor = Color(0xFF533C36);
   static const Color kAccentColor = Color(0xFF392A25);
@@ -79,10 +80,13 @@ class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
     if (isGameOver) return;
 
     children.whereType<PieceComponent>().forEach((component) => component.removeFromParent());
-    final double startX = (size.x - cellSize.x) / 3; // 조각을 화면 중앙에 배치
-    final double startY = size.y - cellSize.y * 4; // 화면 하단에 위치
-    for (var i = 0; i < 3; i++) {
-      final piece = pieceGenerator.generatePiece();
+
+    final pieces = pieceGenerator.generatePieces(gameState);
+    final double startX = (size.x - cellSize.x) / 3;
+    final double startY = size.y - cellSize.y * 4;
+
+    for (var i = 0; i < pieces.length; i++) {
+      final piece = pieces[i];
       gameState.addPiece(piece);
       final pieceComponent = PieceComponent(
         piece: piece,
@@ -210,6 +214,10 @@ class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
   }
 
   void updatePreview(int row, int col, List<List<int>> piece) {
-    children.whereType<PreviewComponent>().forEach((component) => component.updatePreview(row, col, piece));
+    if (gameState.canPlacePiece(row, col, piece)) {
+      children.whereType<PreviewComponent>().forEach((component) => component.updatePreview(row, col, piece));
+    } else {
+      children.whereType<PreviewComponent>().forEach((component) => component.clearPreview());
+    }
   }
 }

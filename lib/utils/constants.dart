@@ -71,15 +71,15 @@ class Constants {
   static Color getColor(int value) {
     switch (value) {
       case 1:
-        return Colors.redAccent;
+        return const Color(0xFF8D6E63); // 갈색 돌
       case 2:
-        return Colors.blueAccent;
+        return const Color(0xFF90A4AE); // 회색 돌
       case 3:
-        return Colors.greenAccent;
+        return const Color(0xFFFFCC80); // 밝은 갈색 돌
       case 4:
-        return Colors.yellowAccent;
+        return const Color(0xFFBCAAA4); // 베이지색 돌
       case 5:
-        return Colors.purpleAccent;
+        return const Color(0xFF78909C); // 청회색 돌
       default:
         return Colors.white;
     }
