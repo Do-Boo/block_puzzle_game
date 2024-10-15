@@ -1,4 +1,3 @@
-import 'package:block_puzzle_game/components/particle_component.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
@@ -6,18 +5,20 @@ import '../components/grid_component.dart';
 import '../components/piece_component.dart';
 import '../components/preview_component.dart';
 import '../components/score_component.dart';
-import '../utils/block_crush_effect.dart';
 import '../utils/cartoon_spark_effect.dart';
 import '../utils/game_state.dart';
 import '../utils/piece_generator.dart';
 import '../utils/constants.dart';
 import '../utils/score_popup_effect.dart';
+import '../components/particle_component.dart';
 
 class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
   late GameState gameState;
   late final PieceGenerator pieceGenerator;
   late final Vector2 gridPosition;
   late final Vector2 cellSize;
+  late Vector2 gridSize;
+  final double horizontalPadding = 16.0;
   late GridComponent gridComponent;
   bool isGameOver = false;
 
@@ -28,8 +29,11 @@ class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
   Future<void> onLoad() async {
     await super.onLoad();
 
-    cellSize = Vector2(size.x / Constants.COLS, size.x / Constants.COLS);
-    gridPosition = Vector2(0, cellSize.y * 2);
+    cellSize = Vector2(
+      (size.x - horizontalPadding * 2) / Constants.COLS,
+      (size.x - horizontalPadding * 2) / Constants.COLS,
+    );
+    gridPosition = Vector2(horizontalPadding, cellSize.y * 3);
 
     gameState = GameState();
     pieceGenerator = PieceGenerator();
@@ -76,7 +80,7 @@ class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
 
     children.whereType<PieceComponent>().forEach((component) => component.removeFromParent());
     final double startX = (size.x - cellSize.x) / 3; // 조각을 화면 중앙에 배치
-    final double startY = size.y - cellSize.y * 3; // 화면 하단에 위치
+    final double startY = size.y - cellSize.y * 4; // 화면 하단에 위치
     for (var i = 0; i < 3; i++) {
       final piece = pieceGenerator.generatePiece();
       gameState.addPiece(piece);
