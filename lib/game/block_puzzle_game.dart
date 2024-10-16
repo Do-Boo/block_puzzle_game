@@ -93,10 +93,11 @@ class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
     for (var i = 0; i < pieces.length; i++) {
       final piece = pieces[i];
       gameState.addPiece(piece);
+      print('startX: $startX');
       final pieceComponent = PieceComponent(
         piece: piece,
         cellSize: cellSize,
-        position: Vector2(startX * i + cellSize.x * 1.2, startY),
+        position: Vector2(startX * i + cellSize.x * 1, startY),
         gridPosition: gridPosition,
         game: this,
       );

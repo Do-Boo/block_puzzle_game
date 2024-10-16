@@ -55,6 +55,14 @@ class AppLocalizations {
     }
   }
 
+  String get highScore {
+    switch (locale.languageCode) {
+      case 'ko':
+        return '최고 점수';
+      default:
+        return 'High Score';
+    }
+  }
   // 추가적인 번역이 필요한 문자열들을 여기에 추가할 수 있습니다.
 }
 

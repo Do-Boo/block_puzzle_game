@@ -17,6 +17,7 @@ class GameState {
   List<List<int>> get grid => _grid;
   List<List<List<int>>> get pieces => _pieces;
   int get score => _score;
+  int get consecutiveClears => _consecutiveClears;
 
   void initializeGrid() {
     _grid = List.generate(
@@ -27,6 +28,10 @@ class GameState {
 
   void addPiece(List<List<int>> piece) {
     _pieces.add(piece);
+  }
+
+  void addScore(int value) {
+    _score += value;
   }
 
   bool canPlaceAnyPiece() {
