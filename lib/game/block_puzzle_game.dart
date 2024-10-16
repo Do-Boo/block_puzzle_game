@@ -72,12 +72,17 @@ class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
   Future<void> _addComponents() async {
     gridComponent = GridComponent(position: gridPosition, cellSize: cellSize, gameState: gameState);
     add(gridComponent);
-    add(PreviewComponent(cellSize: cellSize, gridPosition: gridPosition));
+    add(PreviewComponent(cellSize: cellSize, gridPosition: gridPosition, gameState: gameState));
     add(ScoreComponent(position: Vector2(10, 10)));
   }
 
   void spawnPieces() {
     if (isGameOver) return;
+
+    // 게임 상태 확인 및 초기화
+    if (gameState.pieces.isNotEmpty) {
+      gameState.pieces.clear();
+    }
 
     children.whereType<PieceComponent>().forEach((component) => component.removeFromParent());
 
@@ -193,10 +198,26 @@ class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
 
   void reset() {
     isGameOver = false;
-    gameState = GameState();
-    gridComponent.gameState = gameState;
-    gridComponent.resetGrid();
+    gameState = GameState(); // 새로운 GameState 인스턴스 생성
+
+    // GridComponent 초기화
+    children.whereType<GridComponent>().forEach((component) {
+      component.gameState = gameState;
+      component.resetGrid();
+    });
+
+    // PreviewComponent 초기화
+    children.whereType<PreviewComponent>().forEach((component) {
+      component.gameState = gameState;
+      component.clearPreview();
+    });
+
+    // PieceComponent 제거
     children.whereType<PieceComponent>().forEach((component) => component.removeFromParent());
+
+    // ScoreComponent 초기화 (만약 점수 컴포넌트가 있다면)
+    // children.whereType<ScoreComponent>().forEach((component) => component.reset());
+
     spawnPieces();
     overlays.remove('gameOver');
   }
