@@ -1,6 +1,5 @@
 import 'package:flame/game.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/material.dart';
 import '../components/grid_component.dart';
 import '../components/piece_component.dart';
 import '../components/preview_component.dart';
@@ -11,6 +10,7 @@ import '../utils/piece_generator.dart';
 import '../utils/constants.dart';
 import '../utils/score_popup_effect.dart';
 import '../components/particle_component.dart';
+import 'package:flame/components.dart';
 
 class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
   late GameState gameState;
@@ -22,6 +22,7 @@ class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
   late GridComponent gridComponent;
   bool isGameOver = false;
   List<List<List<int>>> currentPieces = [];
+  late SpriteComponent backgroundSprite;
 
   static const Color kBackgroundColor = Color(0xFF533C36);
   static const Color kAccentColor = Color(0xFF392A25);
@@ -29,6 +30,13 @@ class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+
+    // 배경 이미지 로드
+    backgroundSprite = SpriteComponent(
+      sprite: await Sprite.load('background1.png'),
+      size: size,
+    );
+    add(backgroundSprite);
 
     cellSize = Vector2(
       (size.x - horizontalPadding * 2) / Constants.COLS,
@@ -41,32 +49,6 @@ class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
 
     await _addComponents();
     spawnPieces();
-  }
-
-  @override
-  void render(Canvas canvas) {
-    _drawBackground(canvas);
-    super.render(canvas);
-  }
-
-  void _drawBackground(Canvas canvas) {
-    final rect = Rect.fromLTWH(0, 0, size.x, size.y);
-    final paint = Paint()..color = kBackgroundColor;
-    canvas.drawRect(rect, paint);
-
-    // 배경 패턴 그리기
-    final patternPaint = Paint()
-      ..color = Colors.black.withOpacity(0.05)
-      ..strokeWidth = 1;
-    for (int i = 0; i < size.x; i += 20) {
-      for (int j = 0; j < size.y; j += 20) {
-        canvas.drawLine(
-          Offset(i.toDouble(), j.toDouble()),
-          Offset((i + 20).toDouble(), (j + 20).toDouble()),
-          patternPaint,
-        );
-      }
-    }
   }
 
   Future<void> _addComponents() async {
@@ -97,7 +79,7 @@ class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
       final pieceComponent = PieceComponent(
         piece: piece,
         cellSize: cellSize,
-        position: Vector2(startX * i + cellSize.x * 1, startY),
+        position: Vector2(startX * i + cellSize.x, startY + cellSize.y * 2),
         gridPosition: gridPosition,
         game: this,
       );
@@ -130,7 +112,6 @@ class BlockPuzzleGame extends FlameGame with HasCollisionDetection {
     if (gameState.canPlacePiece(row, col, piece)) {
       gameState.placePiece(row, col, piece);
       gridComponent.updateGrid();
-      print('Grid component updated');
       children.whereType<PreviewComponent>().forEach((component) => component.clearPreview());
 
       HapticFeedback.lightImpact();

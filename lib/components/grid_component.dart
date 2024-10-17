@@ -23,24 +23,6 @@ class GridComponent extends PositionComponent {
   Future<void> _generateAndCacheBackground() async {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
-    // final rect = Rect.fromLTWH(0, 0, size.x, size.y);
-
-    // 전체 배경 (테두리 포함)
-    // final bgGradient = ui.Gradient.linear(
-    //   Offset.zero,
-    //   Offset(size.x, size.y),
-    //   [const Color(0xFF4D3E34), const Color(0xFF3D2E24)],
-    // );
-    // canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(20)), Paint()..shader = bgGradient);
-
-    // 그리드 배경
-    final gridBgGradient = ui.Gradient.linear(
-      Offset(cellSize.x, cellSize.y),
-      Offset(size.x - cellSize.x, size.y - cellSize.y),
-      [const Color(0xFF3A2E27), const Color(0xFF2A1E17)],
-    );
-    final gridRect = Rect.fromLTWH(0, 0, Constants.COLS * cellSize.x, Constants.ROWS * cellSize.y);
-    canvas.drawRRect(RRect.fromRectAndRadius(gridRect, const Radius.circular(10)), Paint()..shader = gridBgGradient);
 
     // 그리드 셀
     for (int row = 0; row < Constants.ROWS; row++) {
@@ -55,54 +37,33 @@ class GridComponent extends PositionComponent {
   }
 
   void _drawCell(Canvas canvas, Rect rect, int row, int col) {
-    final random = Random(row * Constants.COLS + col);
-    final baseColor = Color.lerp(const Color(0xFF231813), const Color(0xFF2A1E17), random.nextDouble())!;
+    final baseColor = Constants.getColor(1); // Constants의 색상 사용
 
     final gradient = ui.Gradient.radial(
       rect.center,
       rect.width / 2,
       [
-        baseColor.withOpacity(0.9), // 더 진한 색상
-        baseColor,
-        baseColor.withOpacity(1.0),
+        baseColor.withOpacity(0.2),
       ],
-      [0.0, 0.7, 1.0],
+      [0.0],
     );
 
-    final shadowPaint = Paint()
-      ..color = Colors.black.withOpacity(0.5) // 더 진한 그림자
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
-
-    // 그림자
-    canvas.drawRRect(RRect.fromRectAndRadius(rect.translate(3, 3), const Radius.circular(8)), shadowPaint);
-
     // 셀
-    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(8)), Paint()..shader = gradient);
+    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(6)), Paint()..shader = gradient);
 
     // 테두리
     final borderPaint = Paint()
-      ..color = Colors.black
+      ..color = Colors.white
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3; // 더 두꺼운 테두리
-    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(8)), borderPaint);
+      ..strokeWidth = 1; // 부드러운 테두리
+    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(6)), borderPaint);
 
     // 하이라이트
     final highlightPaint = Paint()
-      ..color = Colors.white.withOpacity(0.2) // 더 밝은 하이라이트
+      ..color = const Color(0xFFFDF5E6).withOpacity(0.5) // 밝은 노란색 하이라이트
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    canvas.drawRRect(RRect.fromRectAndRadius(rect.deflate(2), const Radius.circular(6)), highlightPaint);
-
-    // 추가 하이라이트 (볼록한 느낌 강화)
-    final highlightGradient = ui.Gradient.linear(
-      rect.topLeft,
-      rect.bottomRight,
-      [Colors.white.withOpacity(0.4), Colors.white.withOpacity(0.0)], // 더 강한 하이라이트
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(rect.deflate(4), const Radius.circular(4)),
-      Paint()..shader = highlightGradient,
-    );
+      ..strokeWidth = 1;
+    canvas.drawRRect(RRect.fromRectAndRadius(rect.deflate(2), const Radius.circular(5)), highlightPaint);
   }
 
   @override
@@ -138,30 +99,30 @@ class GridComponent extends PositionComponent {
       [0.0, 0.7, 1.0],
     );
 
-    canvas.drawRRect(RRect.fromRectAndRadius(rect.deflate(4), const Radius.circular(6)), Paint()..shader = gradient);
+    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(6)), Paint()..shader = gradient);
 
     // 테두리
     final borderPaint = Paint()
       ..color = Colors.black
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3; // 더 두꺼운 테두리
-    canvas.drawRRect(RRect.fromRectAndRadius(rect.deflate(4), const Radius.circular(6)), borderPaint);
+      ..strokeWidth = 1;
+    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(6)), borderPaint);
 
     // 하이라이트
     final highlightPaint = Paint()
-      ..color = Colors.white.withOpacity(0.4) // 더 밝은 하이라이트
+      ..color = Colors.white.withOpacity(0.4)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
-    canvas.drawRRect(RRect.fromRectAndRadius(rect.deflate(6), const Radius.circular(4)), highlightPaint);
+    canvas.drawRRect(RRect.fromRectAndRadius(rect.deflate(2), const Radius.circular(5)), highlightPaint);
 
     // 추가 하이라이트 (볼록한 느낌 강화)
     final highlightGradient = ui.Gradient.linear(
       rect.topLeft,
       rect.bottomRight,
-      [Colors.white.withOpacity(0.4), Colors.white.withOpacity(0.0)], // 더 강한 하이라이트
+      [Colors.white.withOpacity(0.4), Colors.transparent],
     );
     canvas.drawRRect(
-      RRect.fromRectAndRadius(rect.deflate(8), const Radius.circular(2)),
+      RRect.fromRectAndRadius(rect.deflate(4), const Radius.circular(8)),
       Paint()..shader = highlightGradient,
     );
   }

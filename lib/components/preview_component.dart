@@ -112,12 +112,12 @@ class PreviewComponent extends PositionComponent {
 
   void _drawPreviewCell(Canvas canvas, Rect rect) {
     final previewPaint = Paint()
-      ..color = Colors.white.withOpacity(0.2)
+      ..color = Colors.black.withOpacity(0.1)
       ..style = PaintingStyle.fill;
     canvas.drawRect(rect, previewPaint);
 
     final borderPaint = Paint()
-      ..color = Colors.white.withOpacity(0.3)
+      ..color = Colors.black.withOpacity(0.2)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
     canvas.drawRect(rect, borderPaint);
