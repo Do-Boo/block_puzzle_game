@@ -56,24 +56,24 @@ class PieceComponent extends PositionComponent with DragCallbacks {
           final shadowPaint = Paint()
             ..color = Colors.black.withOpacity(0.3)
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
-          canvas.drawRRect(RRect.fromRectAndRadius(rect.translate(4, 4), const Radius.circular(12)), shadowPaint);
+          canvas.drawRRect(RRect.fromRectAndRadius(rect.translate(4, 4), const Radius.circular(0)), shadowPaint);
 
           // 셀
-          canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(6)), Paint()..shader = gradient);
+          canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(0)), Paint()..shader = gradient);
 
           // 테두리
           final borderPaint = Paint()
             ..color = Colors.black
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1;
-          canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(6)), borderPaint);
+          canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(0)), borderPaint);
 
           // 하이라이트
           final highlightPaint = Paint()
             ..color = Colors.white.withOpacity(0.4)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 2;
-          canvas.drawRRect(RRect.fromRectAndRadius(rect.deflate(2), const Radius.circular(5)), highlightPaint);
+          canvas.drawRRect(RRect.fromRectAndRadius(rect.deflate(2), const Radius.circular(0)), highlightPaint);
 
           // 추가 하이라이트 (볼록한 느낌 강화)
           final highlightGradient = ui.Gradient.linear(
@@ -82,7 +82,7 @@ class PieceComponent extends PositionComponent with DragCallbacks {
             [Colors.white.withOpacity(0.4), Colors.transparent],
           );
           canvas.drawRRect(
-            RRect.fromRectAndRadius(rect.deflate(4), const Radius.circular(8)),
+            RRect.fromRectAndRadius(rect.deflate(4), const Radius.circular(0)),
             Paint()..shader = highlightGradient,
           );
         }

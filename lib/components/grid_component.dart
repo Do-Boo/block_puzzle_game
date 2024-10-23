@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
@@ -37,33 +36,24 @@ class GridComponent extends PositionComponent {
   }
 
   void _drawCell(Canvas canvas, Rect rect, int row, int col) {
-    final baseColor = Constants.getColor(1); // Constants의 색상 사용
-
     final gradient = ui.Gradient.radial(
       rect.center,
       rect.width / 2,
       [
-        baseColor.withOpacity(0.2),
+        Colors.white.withOpacity(0.1),
       ],
       [0.0],
     );
 
     // 셀
-    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(6)), Paint()..shader = gradient);
+    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(0)), Paint()..shader = gradient);
 
     // 테두리
     final borderPaint = Paint()
-      ..color = Colors.white
+      ..color = Colors.white.withOpacity(0.2)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1; // 부드러운 테두리
-    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(6)), borderPaint);
-
-    // 하이라이트
-    final highlightPaint = Paint()
-      ..color = const Color(0xFFFDF5E6).withOpacity(0.5) // 밝은 노란색 하이라이트
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    canvas.drawRRect(RRect.fromRectAndRadius(rect.deflate(2), const Radius.circular(5)), highlightPaint);
+      ..strokeWidth = 0.5; // 부드러운 테두리
+    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(0)), borderPaint);
   }
 
   @override
@@ -99,21 +89,21 @@ class GridComponent extends PositionComponent {
       [0.0, 0.7, 1.0],
     );
 
-    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(6)), Paint()..shader = gradient);
+    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(0)), Paint()..shader = gradient);
 
     // 테두리
     final borderPaint = Paint()
       ..color = Colors.black
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
-    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(6)), borderPaint);
+    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(0)), borderPaint);
 
     // 하이라이트
     final highlightPaint = Paint()
       ..color = Colors.white.withOpacity(0.4)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
-    canvas.drawRRect(RRect.fromRectAndRadius(rect.deflate(2), const Radius.circular(5)), highlightPaint);
+    canvas.drawRRect(RRect.fromRectAndRadius(rect.deflate(2), const Radius.circular(0)), highlightPaint);
 
     // 추가 하이라이트 (볼록한 느낌 강화)
     final highlightGradient = ui.Gradient.linear(
@@ -122,7 +112,7 @@ class GridComponent extends PositionComponent {
       [Colors.white.withOpacity(0.4), Colors.transparent],
     );
     canvas.drawRRect(
-      RRect.fromRectAndRadius(rect.deflate(4), const Radius.circular(8)),
+      RRect.fromRectAndRadius(rect.deflate(4), const Radius.circular(0)),
       Paint()..shader = highlightGradient,
     );
   }
